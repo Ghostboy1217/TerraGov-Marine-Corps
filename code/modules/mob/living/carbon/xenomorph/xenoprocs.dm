@@ -309,26 +309,12 @@
 	if(isliving(hit_atom)) //Hit a mob! This overwrites normal throw code.
 		if(SEND_SIGNAL(src, COMSIG_XENO_LIVING_THROW_HIT, hit_atom) & COMPONENT_KEEP_THROWING)
 			return FALSE
-		throwing = FALSE //Resert throwing since something was hit.
-		reset_movement()
+		set_throwing(FALSE) //Resert throwing since something was hit.
 		return TRUE
 	SEND_SIGNAL(src, COMSIG_XENO_NONE_THROW_HIT)
-	throwing = FALSE //Resert throwing since something was hit.
-	reset_movement()
+	set_throwing(FALSE) //Resert throwing since something was hit.
 	return ..() //Do the parent otherwise, for turfs.
 
-/mob/living/carbon/xenomorph/proc/reset_movement()
-	set_frozen(FALSE)
-	update_canmove()
-
-/mob/living/carbon/xenomorph/proc/stop_movement()
-	set_frozen(TRUE)
-	update_canmove()
-
-/mob/living/carbon/xenomorph/set_frozen(freeze = TRUE)
-	if(fortify && !freeze)
-		return FALSE
-	return ..()
 
 //Bleuugh
 
@@ -467,9 +453,6 @@
 	ammo = GLOB.ammo_list[xeno_caste.spit_types[1]] //No matching projectile time; default to first spit type
 	return
 
-/mob/living/carbon/xenomorph/proc/stealth_router(code = 0)
-	return FALSE
-
 /mob/living/carbon/xenomorph/proc/handle_decay()
 	if(prob(7+(3*tier)+(3*upgrade_as_number()))) // higher level xenos decay faster, higher plasma storage.
 		use_plasma(min(rand(1,2), plasma_stored))
@@ -499,11 +482,14 @@
 	if(isnestedhost(src))
 		return
 
+	if(COOLDOWN_CHECK(src, COOLDOWN_ACID))
+		return
+	COOLDOWN_START(src, COOLDOWN_ACID, 2 SECONDS)
+
 	if(isxenopraetorian(X))
 		GLOB.round_statistics.praetorian_spray_direct_hits++
 		SSblackbox.record_feedback("tally", "round_statistics", 1, "praetorian_spray_direct_hits")
 
-	cooldowns[COOLDOWN_ACID] = addtimer(VARSET_LIST_CALLBACK(cooldowns, COOLDOWN_ACID, null), 2 SECONDS)
 	var/armor_block = run_armor_check("chest", "acid")
 	var/damage = rand(30,40) + SPRAY_MOB_UPGRADE_BONUS(X)
 	apply_acid_spray_damage(damage, armor_block)
